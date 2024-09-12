@@ -1,0 +1,91 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>  // 用於 isprint() 函數
+
+#define ASCII_SIZE 256  // 定義 ASCII 字元的範圍大小
+
+// 定義一個結構體來存儲字元、頻率和機率
+typedef struct {
+    int character;      // 字元 (以 ASCII 值表示)
+    int frequency;      // 字元在文件中的出現次數
+    double probability; // 字元出現的機率 (頻率 / 總字元數)
+} CharFrequency;
+
+// 比較函數，用於 qsort() 排序（根據機率從大到小）
+int compare(const void *a, const void *b) {
+    CharFrequency *charA = (CharFrequency *)a;
+    CharFrequency *charB = (CharFrequency *)b;
+    if (charB->probability > charA->probability) {
+        return 1;
+    } else if (charB->probability < charA->probability) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+int main(int argc, char *argv[]) {
+    // 打開輸入的文件
+    FILE *file = fopen(argv[1], "r");
+
+    // 初始化頻率表和總字元數變量
+    int frequency[ASCII_SIZE] = {0};
+    int total_chars = 0;
+    int ch;
+
+    // 讀取文件中的每個字元並計算其頻率
+    while ((ch = fgetc(file)) != EOF) {
+        // 只統計可打印字元以及換行符和回車符
+        if (isprint(ch) || ch == '\n' || ch == '\r') {
+            frequency[ch]++;  // 增加該字元的頻率
+            total_chars++;    // 增加總字元數
+        }
+    }
+
+    // 構建一個陣列來存儲每個字元的頻率和機率
+    CharFrequency charFrequencies[ASCII_SIZE];
+    int charCount = 0;
+
+    // 遍歷頻率表，找出出現過的字元並計算它們的機率
+    for (int i = 0; i < ASCII_SIZE; i++) {
+        if (frequency[i] > 0) {
+            charFrequencies[charCount].character = i;  // 記錄字元
+            charFrequencies[charCount].frequency = frequency[i];  // 記錄頻率
+            charFrequencies[charCount].probability = (double)frequency[i] / total_chars;  // 計算機率
+            charCount++;
+        }
+    }
+
+    // 將字元根據機率從大到小排序
+    qsort(charFrequencies, charCount, sizeof(CharFrequency), compare);
+
+    // 打印結果表頭
+    printf("symbol,count,probability\n");
+    
+    // 打印每個字元及其頻率和機率
+    for (int i = 0; i < charCount; i++) {
+        int character = charFrequencies[i].character;       // 取得字元
+        double probability = charFrequencies[i].probability; // 取得機率
+        int freq = charFrequencies[i].frequency;            // 取得頻率
+      // 特殊處理一些常見的不可見或特殊字元
+        switch (character) {
+            case '\n':
+                printf("\"\\n\",%d,%.12f\n", freq, probability);  // 處理換行符
+                break;
+            case '\r':
+                printf("\"\\r\",%d,%.12f\n", freq, probability);  // 處理回車符
+                break;
+            case ',':
+                printf("\",\",%d,%.12f\n", freq, probability);    // 處理逗號
+                break;
+            case '"':
+                printf("\"\\\"\",%d,%.12f\n", freq, probability); // 處理雙引號
+                break;
+            default:
+        printf("\"%c\",%d,%.12f\n", character, freq, probability);
+         break;
+        }
+    }
+
+    return 0;
+}
